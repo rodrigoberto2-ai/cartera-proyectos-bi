@@ -302,41 +302,108 @@ def responder(pregunta: str) -> dict:
 
 
 # ------------------------------------------------------------------ interfaz
-# Portal: el cuadro de mando de Power BI a la izquierda y el asistente de IA a la derecha.
+# Portal: el cuadro de mando de Power BI a la izquierda y el asistente de IA a la derecha,
+# con la misma paleta que el informe (verde petróleo, degradado de las tarjetas y fondo gris azulado).
 import streamlit.components.v1 as components
 
 POWERBI_URL = os.getenv(
     "POWERBI_URL",
     "https://app.powerbi.com/view?r=eyJrIjoiN2JkZTZhN2MtZmRmZC00Y2M0LWFlNGUtNjg4ODlkOWM5N2QyIiwidCI6ImFiMTUzNmU4LWVkYzgtNDE4OC1iM2U3LWNkMjU3MDZiODdlMCJ9&pageName=a12dc0d2106a6ab753ed",
 )
-ALTO = 620
+ALTO = 600  # informe y asistente comparten la misma altura
 
 st.set_page_config(page_title="Portal · Cartera de Proyectos", page_icon="📊", layout="wide")
-st.markdown("""
+st.markdown(f"""
 <style>
-  .block-container { padding-top: 1.2rem; padding-bottom: 0.5rem; max-width: 100%; }
-  h1 { font-size: 1.5rem !important; margin-bottom: 0 !important; }
+  @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+  :root {{
+    --teal: #155E66; --teal-2: #1E6F78; --teal-soft: #8DB9BD;
+    --fondo: #EEF4F6; --tinta: #163A40; --tinta-suave: #5B7479; --linea: #D6E4E7;
+  }}
+  html, body, .stApp, .stApp p, .stApp button, .stApp textarea, .stApp summary {{ font-family: 'Inter', sans-serif; }}
+  .stApp {{ background: var(--fondo); }}
+  header[data-testid="stHeader"] {{ background: transparent; }}
+  .block-container {{ padding: 1.1rem 1.6rem 0.6rem; max-width: 100%; }}
+
+  /* barra de título, como la cabecera del informe */
+  .barra {{ background: var(--teal); color: #fff; border-radius: 18px; padding: 16px 24px;
+           display: flex; justify-content: space-between; align-items: center; gap: 12px;
+           margin-bottom: 14px; box-shadow: 0 6px 18px rgba(21,94,102,.18); }}
+  .barra b {{ letter-spacing: .2em; font-weight: 600; font-size: 17px; }}
+  .barra span {{ font-size: 12px; letter-spacing: .06em; opacity: .85; text-align: right; }}
+
+  /* informe: tarjeta blanca redondeada */
+  [data-testid="stIFrame"], iframe[title="st.iframe"] {{ border-radius: 18px; background: #fff;
+           box-shadow: 0 8px 24px rgba(21,94,102,.12); }}
+
+  /* panel del asistente: misma altura que el informe */
+  .stApp .st-key-panel {{ height: {ALTO}px !important; max-height: {ALTO}px; flex: 0 0 auto !important; background: #fff; border-radius: 18px; overflow: hidden;
+           box-shadow: 0 8px 24px rgba(21,94,102,.12); gap: 0 !important; }}
+  .st-key-cabecera {{ background: linear-gradient(135deg, var(--teal) 0%, var(--teal-2) 45%, var(--teal-soft) 100%);
+           padding: 16px 16px 14px; gap: 10px !important; }}
+  .cab-titulo {{ color: #fff; font-weight: 600; letter-spacing: .14em; font-size: 13px; }}
+  .cab-sub {{ color: rgba(255,255,255,.82); font-size: 11.5px; margin-top: 2px; }}
+
+  /* preguntas de ejemplo: píldoras de cristal (liquid glass) */
+  .st-key-chips {{ flex-direction: row !important; flex-wrap: wrap; gap: 6px !important; }}
+  .st-key-chips [data-testid="stElementContainer"] {{ width: auto !important; }}
+  .st-key-chips button {{
+      background: rgba(255,255,255,.16) !important; color: #fff !important;
+      border: 1px solid rgba(255,255,255,.45) !important; border-radius: 999px !important;
+      padding: 3px 12px !important; min-height: 0 !important;
+      backdrop-filter: blur(12px) saturate(160%); -webkit-backdrop-filter: blur(12px) saturate(160%);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.12),
+                  0 4px 14px rgba(9,40,44,.18);
+      transition: background .2s, transform .15s; }}
+  .st-key-chips button:hover {{ background: rgba(255,255,255,.30) !important; transform: translateY(-1px); }}
+  .st-key-chips button p {{ font-size: 12px !important; font-weight: 500; }}
+
+  /* conversación: ocupa el espacio que queda y hace scroll */
+  .st-key-panel > div:has(.st-key-conv) {{ flex: 1 1 auto !important; min-height: 0; overflow-y: auto;
+           display: flex; flex-direction: column-reverse; }}  /* el scroll empieza abajo, en la última respuesta */
+  .st-key-panel > div:has(.st-key-entrada) {{ order: 3; }}
+  .st-key-conv {{ padding: 12px 14px 4px; gap: 10px !important; }}
+  .vacio {{ color: var(--tinta-suave); font-size: 13px; line-height: 1.5; padding: 6px 2px; }}
+  [data-testid="stChatMessage"] {{ background: #F3F8F9; border-radius: 14px; padding: 10px 12px; }}
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{ background: var(--teal); }}
+  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) p {{ color: #fff; }}
+  [data-testid="stChatMessage"] p {{ font-size: 13.5px; color: var(--tinta); }}
+  [data-testid="stChatMessageAvatarAssistant"] {{ background: var(--teal-2); }}
+  .meta {{ color: var(--tinta-suave); font-size: 11px; }}
+  [data-testid="stExpander"] details {{ border-radius: 10px; border-color: var(--linea); }}
+  [data-testid="stExpander"] summary p {{ font-size: 12px; color: var(--teal); }}
+
+  /* caja de texto abajo */
+  .st-key-entrada {{ padding: 8px 12px 12px; border-top: 1px solid var(--linea); }}
+  .st-key-entrada [data-testid="stChatInput"] > div {{ border-radius: 999px; border: 1px solid var(--linea);
+           background: #fff; }}
+  .st-key-entrada [data-testid="stChatInputSubmitButton"] {{ background: var(--teal); color: #fff; border-radius: 999px; }}
 </style>
 """, unsafe_allow_html=True)
 
 MOTOR = {
-    "claude": f"API de Claude ({MODELO})",
-    "gemini": "Gemini (plan gratuito)",
-}.get(PROVEEDOR, f"modelo local {OLLAMA_MODELO} (Ollama)")
+    "claude": f"Claude ({MODELO})",
+    "gemini": "Gemini",
+}.get(PROVEEDOR, f"modelo local {OLLAMA_MODELO}")
+ORIGEN = "PostgreSQL · solo lectura" if BD == "postgres" else "copia de las vistas · solo lectura"
 
-st.title("Cartera de Proyectos · Transformación Digital")
-st.caption("Cuadro de mando en Power BI y asistente de IA sobre los mismos datos de PostgreSQL.")
+st.markdown(
+    '<div class="barra"><b>CARTERA DE PROYECTOS</b>'
+    '<span>Cuadro de mando en Power BI · asistente de IA sobre los mismos datos</span></div>',
+    unsafe_allow_html=True,
+)
 
-EJEMPLOS = [
-    "¿Cuántos proyectos hay en rojo, ámbar y verde?",
-    "¿Qué 5 proyectos se desvían más del presupuesto?",
-    "¿Qué sector tiene más sobrecoste en los proyectos cerrados?",
-    "¿Cuál fue el coste total en junio de 2026?",
-    "¿Cómo va la velocidad de los últimos sprints del PRY-001?",
-]
+EJEMPLOS = {
+    "Semáforo": "¿Cuántos proyectos hay en rojo, ámbar y verde?",
+    "Top desviaciones": "¿Qué 5 proyectos se desvían más del presupuesto?",
+    "Sobrecoste por sector": "¿Qué sector tiene más sobrecoste en los proyectos cerrados?",
+    "Coste de junio": "¿Cuál fue el coste total en junio de 2026?",
+    "Velocidad PRY-001": "¿Cómo va la velocidad de los últimos sprints del PRY-001?",
+}
 
 if "historial" not in st.session_state:
     st.session_state.historial = []
+st.session_state.setdefault("preguntas_hechas", 0)
 
 col_bi, col_ia = st.columns([7, 3], gap="medium")
 
@@ -344,49 +411,55 @@ with col_bi:
     components.iframe(POWERBI_URL, height=ALTO, scrolling=False)
 
 with col_ia:
-    with st.container(border=True):
-        st.markdown("**Pregunta a los datos**")
-        origen = "PostgreSQL, usuario de solo lectura" if BD == "postgres" else "copia de las vistas en DuckDB, solo lectura"
-        st.caption(f"IA: {MOTOR} · datos: {origen}")
+    with st.container(key="panel"):
+        pregunta = None
+        with st.container(key="cabecera"):
+            st.markdown(
+                f'<div class="cab-titulo">PREGUNTA A LOS DATOS</div>'
+                f'<div class="cab-sub">IA: {MOTOR} · {ORIGEN}</div>',
+                unsafe_allow_html=True,
+            )
+            with st.container(key="chips"):
+                for i, (etiqueta, texto) in enumerate(EJEMPLOS.items()):
+                    if st.button(etiqueta, key=f"chip_{i}"):
+                        pregunta = texto
 
-        ejemplo = st.selectbox("Preguntas de ejemplo", ["Elige una pregunta de ejemplo…"] + EJEMPLOS,
-                               label_visibility="collapsed", key="ejemplo")
-        pregunta = st.chat_input("Escribe tu pregunta…")
-        if not pregunta and ejemplo in EJEMPLOS and st.session_state.get("ultimo_ejemplo") != ejemplo:
-            pregunta = ejemplo
-            st.session_state.ultimo_ejemplo = ejemplo
+        with st.container(key="entrada"):
+            escrita = st.chat_input("Escribe tu pregunta…")
+        pregunta = escrita or pregunta
 
-        st.session_state.setdefault("preguntas_hechas", 0)
         if pregunta and st.session_state.preguntas_hechas >= MAX_PREGUNTAS:
-            st.info(f"Has llegado al límite de {MAX_PREGUNTAS} preguntas de esta demo. ¡Gracias por probarla!")
+            st.toast(f"Has llegado al límite de {MAX_PREGUNTAS} preguntas de esta demo. ¡Gracias por probarla!")
             pregunta = None
+        aviso = None
         if pregunta:
             st.session_state.preguntas_hechas += 1
             with st.spinner("Consultando los datos…"):
                 try:
                     st.session_state.historial.insert(0, responder(pregunta))
                 except anthropic.AuthenticationError:
-                    st.error("La clave de la API de Claude no es válida. Revisa ANTHROPIC_API_KEY en asistente/.env.")
+                    aviso = "La clave de la API de Claude no es válida. Revisa ANTHROPIC_API_KEY."
                 except anthropic.RateLimitError:
-                    st.error("Demasiadas peticiones seguidas. Espera unos segundos y vuelve a preguntar.")
+                    aviso = "Demasiadas peticiones seguidas. Espera unos segundos y vuelve a preguntar."
                 except anthropic.APIConnectionError:
-                    st.error("No hay conexión con la API de Claude. Revisa la conexión a internet.")
+                    aviso = "No hay conexión con la API de Claude."
                 except anthropic.APIStatusError as e:
-                    st.error(f"Error de la API de Claude ({e.status_code}): {e.message}")
+                    aviso = f"Error de la API de Claude ({e.status_code}): {e.message}"
                 except psycopg.OperationalError:
-                    st.error("No se puede conectar a PostgreSQL. Revisa que el servidor está arrancado "
-                             "y los datos de PG_ASISTENTE_USER / PG_ASISTENTE_PASSWORD en asistente/.env.")
+                    aviso = "No se puede conectar a PostgreSQL. Revisa el servidor y el usuario de lectura en el .env."
                 except OSError as e:
-                    st.error(f"No hay conexión con el modelo de IA. ({e})")
+                    aviso = f"No hay conexión con el modelo de IA. ({e})"
                 except (ValueError, RuntimeError, psycopg.Error, json.JSONDecodeError) as e:
-                    st.warning(f"No he podido responder: {e}")
+                    aviso = f"No he podido responder: {e}"
 
-        conversacion = st.container(height=440, border=False)
-        with conversacion:
+        with st.container(key="conv"):
+            if aviso:
+                st.warning(aviso)
             if not st.session_state.historial:
-                st.caption("Escribe una pregunta o elige un ejemplo. Por ejemplo: "
-                           "«¿Cuál fue el coste total en junio de 2026?»")
-            for r in st.session_state.historial:
+                st.markdown('<div class="vacio">Pregunta lo que quieras sobre la cartera o pulsa uno de los '
+                            'ejemplos de arriba. La respuesta sale de la base de datos y verás cómo se ha '
+                            'calculado.</div>', unsafe_allow_html=True)
+            for r in reversed(st.session_state.historial):  # la más reciente abajo, junto a la caja
                 with st.chat_message("user"):
                     st.write(r["pregunta"])
                 with st.chat_message("assistant"):
@@ -399,5 +472,5 @@ with col_ia:
                         st.caption(r["explicacion"])
                     coste_txt = {"claude": f"≈ {r['coste']:.4f} USD", "gemini": "plan gratuito"}.get(
                         PROVEEDOR, "coste 0 (modelo local)")
-                    st.caption(f"{r['tokens_in']:,} + {r['tokens_out']:,} tokens · {coste_txt} · "
-                               f"{r['segundos']:.1f} s")
+                    st.markdown(f'<div class="meta">{r["tokens_in"]:,} + {r["tokens_out"]:,} tokens · '
+                                f'{coste_txt} · {r["segundos"]:.1f} s</div>', unsafe_allow_html=True)
