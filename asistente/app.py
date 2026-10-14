@@ -57,6 +57,12 @@ CONEXION = dict(
 
 VISTAS = {"vw_estado_proyecto", "vw_velocidad_sprint", "vw_coste_mensual"}
 
+# Base de datos: PostgreSQL en local; en la nube, una copia de las vistas en DuckDB
+# (python asistente/exportar_duckdb.py), que entiende el mismo SQL y viaja con el código.
+DUCKDB_RUTA = CARPETA / "datos_cartera.duckdb"
+BD = os.getenv("BD", "postgres" if os.getenv("PG_ASISTENTE_PASSWORD") else "duckdb").lower()
+MAX_PREGUNTAS = int(os.getenv("MAX_PREGUNTAS", "15"))  # por visitante, para no agotar la cuota gratuita
+
 ESQUEMA = """
 Base de datos PostgreSQL, esquema `cartera`. Solo puedes consultar estas tres vistas:
 
@@ -238,6 +244,13 @@ def validar_sql(sql: str) -> str:
 
 
 def ejecutar(sql: str) -> pd.DataFrame:
+    if BD == "duckdb":
+        import duckdb
+        con = duckdb.connect(str(DUCKDB_RUTA), read_only=True)
+        try:
+            return con.execute(sql).df()
+        finally:
+            con.close()
     with psycopg.connect(**CONEXION) as conn:
         conn.read_only = True
         with conn.cursor() as cur:
@@ -333,7 +346,8 @@ with col_bi:
 with col_ia:
     with st.container(border=True):
         st.markdown("**Pregunta a los datos**")
-        st.caption(f"IA: {MOTOR} · usuario de solo lectura")
+        origen = "PostgreSQL, usuario de solo lectura" if BD == "postgres" else "copia de las vistas en DuckDB, solo lectura"
+        st.caption(f"IA: {MOTOR} · datos: {origen}")
 
         ejemplo = st.selectbox("Preguntas de ejemplo", ["Elige una pregunta de ejemplo…"] + EJEMPLOS,
                                label_visibility="collapsed", key="ejemplo")
@@ -342,7 +356,12 @@ with col_ia:
             pregunta = ejemplo
             st.session_state.ultimo_ejemplo = ejemplo
 
+        st.session_state.setdefault("preguntas_hechas", 0)
+        if pregunta and st.session_state.preguntas_hechas >= MAX_PREGUNTAS:
+            st.info(f"Has llegado al límite de {MAX_PREGUNTAS} preguntas de esta demo. ¡Gracias por probarla!")
+            pregunta = None
         if pregunta:
+            st.session_state.preguntas_hechas += 1
             with st.spinner("Consultando los datos…"):
                 try:
                     st.session_state.historial.insert(0, responder(pregunta))
