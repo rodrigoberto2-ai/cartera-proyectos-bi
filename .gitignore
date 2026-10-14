@@ -1,3 +1,7 @@
 data/*.csv
 __pycache__/
 *.pbix
+
+# asistente de IA
+asistente/.env
+asistente/registro_preguntas.csv
