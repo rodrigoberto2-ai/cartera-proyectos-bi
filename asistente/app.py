@@ -385,7 +385,8 @@ st.markdown(f"""
   /* caja de texto abajo */
   .st-key-entrada {{ padding: 8px 12px 12px; border-top: 1px solid var(--linea); }}
   .st-key-entrada [data-testid="stChatInput"] > div {{ border-radius: 8px; border: 1px solid var(--linea);
-           background: #fff; }}
+           background: linear-gradient(135deg, #F4FAFA 0%, #E2F0F1 100%); }}
+  .st-key-entrada [data-testid="stChatInput"] textarea {{ background: transparent; }}
   .st-key-entrada [data-testid="stChatInputSubmitButton"] {{ background: var(--teal); color: #fff; border-radius: 8px; }}
 </style>
 """, unsafe_allow_html=True)
@@ -414,7 +415,7 @@ if "historial" not in st.session_state:
     st.session_state.historial = []
 st.session_state.setdefault("preguntas_hechas", 0)
 
-col_bi, col_ia = st.columns([7, 3], gap="medium")
+col_bi, col_ia = st.columns([7, 3], gap="small")
 
 with col_bi:
     st.markdown(f'<div class="pbi"><iframe src="{POWERBI_URL}" allowfullscreen></iframe></div>',
