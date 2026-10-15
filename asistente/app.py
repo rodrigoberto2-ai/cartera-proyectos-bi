@@ -352,7 +352,6 @@ st.markdown(f"""
   .st-key-cabecera {{ background: linear-gradient(135deg, var(--teal) 0%, var(--teal-2) 45%, var(--teal-soft) 100%);
            padding: 16px 16px 14px; gap: 10px !important; }}
   .cab-titulo {{ color: #fff; font-weight: 600; letter-spacing: .14em; font-size: 13px; }}
-  .cab-sub {{ color: rgba(255,255,255,.82); font-size: 11px; margin-top: 3px; }}
   .st-key-cabecera [data-testid="stMarkdownContainer"] {{ margin-bottom: 0; }}  /* evita que el subtítulo pise los botones */
 
   /* preguntas de ejemplo: botones blancos de cristal con texto verde */
@@ -392,11 +391,6 @@ st.markdown(f"""
 </style>
 """, unsafe_allow_html=True)
 
-MOTOR = {
-    "claude": f"Claude ({MODELO})",
-    "gemini": "Gemini",
-}.get(PROVEEDOR, f"modelo local {OLLAMA_MODELO}")
-ORIGEN = "PostgreSQL · solo lectura" if BD == "postgres" else "copia de las vistas · solo lectura"
 
 st.markdown(
     '<div class="barra"><b>CARTERA DE PROYECTOS</b>'
@@ -426,11 +420,7 @@ with col_ia:
     with st.container(key="panel"):
         pregunta = None
         with st.container(key="cabecera"):
-            st.markdown(
-                f'<div class="cab-titulo">PREGUNTA A LOS DATOS</div>'
-                f'<div class="cab-sub">IA: {MOTOR} · {ORIGEN}</div>',
-                unsafe_allow_html=True,
-            )
+            st.markdown('<div class="cab-titulo">PREGUNTA A LOS DATOS</div>', unsafe_allow_html=True)
             with st.container(key="chips"):
                 for i, (etiqueta, texto) in enumerate(EJEMPLOS.items()):
                     if st.button(etiqueta, key=f"chip_{i}"):
