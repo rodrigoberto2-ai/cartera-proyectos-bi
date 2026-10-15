@@ -304,13 +304,12 @@ def responder(pregunta: str) -> dict:
 # ------------------------------------------------------------------ interfaz
 # Portal: el cuadro de mando de Power BI a la izquierda y el asistente de IA a la derecha,
 # con la misma paleta que el informe (verde petróleo, degradado de las tarjetas y fondo gris azulado).
-import streamlit.components.v1 as components
 
 POWERBI_URL = os.getenv(
     "POWERBI_URL",
     "https://app.powerbi.com/view?r=eyJrIjoiN2JkZTZhN2MtZmRmZC00Y2M0LWFlNGUtNjg4ODlkOWM5N2QyIiwidCI6ImFiMTUzNmU4LWVkYzgtNDE4OC1iM2U3LWNkMjU3MDZiODdlMCJ9&pageName=a12dc0d2106a6ab753ed",
 )
-ALTO = 600  # informe y asistente comparten la misma altura
+BARRA_PBI = 60  # alto de la barra inferior del visor de Power BI, que se recorta
 
 st.set_page_config(page_title="Portal · Cartera de Proyectos", page_icon="📊", layout="wide")
 st.markdown(f"""
@@ -326,18 +325,28 @@ st.markdown(f"""
   .block-container {{ padding: 1.1rem 1.6rem 0.6rem; max-width: 100%; }}
 
   /* barra de título, como la cabecera del informe */
-  .barra {{ background: var(--teal); color: #fff; border-radius: 18px; padding: 16px 24px;
+  .barra {{ background: var(--teal); color: #fff; border-radius: 8px; padding: 16px 24px;
            display: flex; justify-content: space-between; align-items: center; gap: 12px;
            margin-bottom: 14px; box-shadow: 0 6px 18px rgba(21,94,102,.18); }}
   .barra b {{ letter-spacing: .2em; font-weight: 600; font-size: 17px; }}
   .barra span {{ font-size: 12px; letter-spacing: .06em; opacity: .85; text-align: right; }}
 
   /* informe: tarjeta blanca redondeada */
-  [data-testid="stIFrame"], iframe[title="st.iframe"] {{ border-radius: 18px; background: #fff;
-           box-shadow: 0 8px 24px rgba(21,94,102,.12); }}
+  /* el lienzo tiene la proporción de la página (16:9) y la barra inferior de Power BI queda fuera */
+  .pbi {{ position: relative; width: 100%; aspect-ratio: 16 / 9; overflow: hidden; border-radius: 8px;
+          background: #fff; box-shadow: 0 8px 24px rgba(21,94,102,.12); }}
+  [data-testid="stMarkdownContainer"]:has(> .pbi) {{ margin-bottom: 0; }}
+  .pbi iframe {{ position: absolute; top: 0; left: 0; width: 100%; height: calc(100% + {BARRA_PBI}px); border: 0; }}
 
-  /* panel del asistente: misma altura que el informe */
-  .stApp .st-key-panel {{ height: {ALTO}px !important; max-height: {ALTO}px; flex: 0 0 auto !important; background: #fff; border-radius: 18px; overflow: hidden;
+  /* panel del asistente: la columna mide lo mismo que el informe y el panel la ocupa entera */
+  [data-testid="stColumn"]:has(.st-key-panel) {{ position: relative; }}
+  [data-testid="stColumn"]:has(.st-key-panel) > [data-testid="stVerticalBlock"] {{ position: absolute; inset: 0; }}
+  [data-testid="stLayoutWrapper"]:has(> .st-key-panel) {{ flex: 1 1 auto; min-height: 0; }}
+  @media (max-width: 640px) {{   /* en el móvil las columnas se apilan: el panel recupera su propia altura */
+    [data-testid="stColumn"]:has(.st-key-panel) > [data-testid="stVerticalBlock"] {{ position: static; }}
+    .stApp .st-key-panel {{ height: 520px !important; min-height: 520px; flex: 0 0 auto !important; }}
+  }}
+  .stApp .st-key-panel {{ height: 100%; flex: 1 1 auto !important; background: #fff; border-radius: 8px; overflow: hidden;
            box-shadow: 0 8px 24px rgba(21,94,102,.12); gap: 0 !important; }}
   .st-key-cabecera {{ background: linear-gradient(135deg, var(--teal) 0%, var(--teal-2) 45%, var(--teal-soft) 100%);
            padding: 16px 16px 14px; gap: 10px !important; }}
@@ -349,7 +358,7 @@ st.markdown(f"""
   .st-key-chips [data-testid="stElementContainer"] {{ width: auto !important; }}
   .st-key-chips button {{
       background: rgba(255,255,255,.16) !important; color: #fff !important;
-      border: 1px solid rgba(255,255,255,.45) !important; border-radius: 999px !important;
+      border: 1px solid rgba(255,255,255,.45) !important; border-radius: 6px !important;
       padding: 3px 12px !important; min-height: 0 !important;
       backdrop-filter: blur(12px) saturate(160%); -webkit-backdrop-filter: blur(12px) saturate(160%);
       box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.12),
@@ -364,20 +373,20 @@ st.markdown(f"""
   .st-key-panel > div:has(.st-key-entrada) {{ order: 3; }}
   .st-key-conv {{ padding: 12px 14px 4px; gap: 10px !important; }}
   .vacio {{ color: var(--tinta-suave); font-size: 13px; line-height: 1.5; padding: 6px 2px; }}
-  [data-testid="stChatMessage"] {{ background: #F3F8F9; border-radius: 14px; padding: 10px 12px; }}
+  [data-testid="stChatMessage"] {{ background: #F3F8F9; border-radius: 8px; padding: 10px 12px; }}
   [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{ background: var(--teal); }}
   [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) p {{ color: #fff; }}
   [data-testid="stChatMessage"] p {{ font-size: 13.5px; color: var(--tinta); }}
   [data-testid="stChatMessageAvatarAssistant"] {{ background: var(--teal-2); }}
   .meta {{ color: var(--tinta-suave); font-size: 11px; }}
-  [data-testid="stExpander"] details {{ border-radius: 10px; border-color: var(--linea); }}
+  [data-testid="stExpander"] details {{ border-radius: 6px; border-color: var(--linea); }}
   [data-testid="stExpander"] summary p {{ font-size: 12px; color: var(--teal); }}
 
   /* caja de texto abajo */
   .st-key-entrada {{ padding: 8px 12px 12px; border-top: 1px solid var(--linea); }}
-  .st-key-entrada [data-testid="stChatInput"] > div {{ border-radius: 999px; border: 1px solid var(--linea);
+  .st-key-entrada [data-testid="stChatInput"] > div {{ border-radius: 8px; border: 1px solid var(--linea);
            background: #fff; }}
-  .st-key-entrada [data-testid="stChatInputSubmitButton"] {{ background: var(--teal); color: #fff; border-radius: 999px; }}
+  .st-key-entrada [data-testid="stChatInputSubmitButton"] {{ background: var(--teal); color: #fff; border-radius: 8px; }}
 </style>
 """, unsafe_allow_html=True)
 
@@ -408,7 +417,8 @@ st.session_state.setdefault("preguntas_hechas", 0)
 col_bi, col_ia = st.columns([7, 3], gap="medium")
 
 with col_bi:
-    components.iframe(POWERBI_URL, height=ALTO, scrolling=False)
+    st.markdown(f'<div class="pbi"><iframe src="{POWERBI_URL}" allowfullscreen></iframe></div>',
+                unsafe_allow_html=True)
 
 with col_ia:
     with st.container(key="panel"):
