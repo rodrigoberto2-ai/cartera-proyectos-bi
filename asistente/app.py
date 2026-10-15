@@ -318,6 +318,7 @@ st.markdown(f"""
   @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
   :root {{
     --teal: #155E66; --teal-2: #1E6F78; --teal-soft: #8DB9BD;
+    --margen: clamp(12px, 1.65vw, 34px);
     --fondo: #EEF4F6; --tinta: #163A40; --tinta-suave: #5B7479; --linea: #D6E4E7;
   }}
   html, body, .stApp, .stApp p, .stApp button, .stApp textarea, .stApp summary {{ font-family: 'Inter', sans-serif; }}
@@ -347,15 +348,16 @@ st.markdown(f"""
     [data-testid="stColumn"]:has(.st-key-panel) > [data-testid="stVerticalBlock"] {{ position: static; }}
     .stApp .st-key-panel {{ height: 520px !important; min-height: 520px; flex: 0 0 auto !important; }}
   }}
-  .stApp .st-key-panel {{ height: 100%; flex: 1 1 auto !important; background: #fff; border-radius: 8px; overflow: hidden;
-           box-shadow: 0 8px 24px rgba(21,94,102,.12); gap: 0 !important; }}
+  .stApp .st-key-panel {{ height: 100%; flex: 1 1 auto !important; background: #F1F5F6; border-radius: 8px; overflow: hidden;
+           padding: var(--margen) 10px 10px; /* mismo margen superior que la cabecera del informe */
+           box-shadow: 0 8px 24px rgba(21,94,102,.12); gap: 12px !important; }}
   .st-key-cabecera {{ background: linear-gradient(135deg, var(--teal) 0%, var(--teal-2) 45%, var(--teal-soft) 100%);
-           padding: 16px 16px 14px; gap: 10px !important; }}
+           padding: 16px 12px 14px; gap: 10px !important; border-radius: 8px; }}
   .cab-titulo {{ color: #fff; font-weight: 600; letter-spacing: .14em; font-size: 13px; }}
   .st-key-cabecera [data-testid="stMarkdownContainer"] {{ margin-bottom: 0; }}  /* evita que el subtítulo pise los botones */
 
   /* preguntas de ejemplo: botones blancos de cristal con texto verde */
-  .st-key-chips {{ flex-direction: row !important; flex-wrap: wrap; gap: 5px !important; margin-top: 4px; }}
+  .st-key-chips {{ flex-direction: row !important; flex-wrap: wrap; gap: 4px !important; margin-top: 4px; }}
   .st-key-chips [data-testid="stElementContainer"] {{ width: auto !important; }}
   .st-key-chips button {{
       background: rgba(255,255,255,.88) !important; color: var(--teal) !important;
@@ -368,13 +370,16 @@ st.markdown(f"""
   .st-key-chips button p {{ font-size: 11px !important; font-weight: 600; color: var(--teal); }}
 
   /* conversación: ocupa el espacio que queda y hace scroll */
-  .st-key-panel > div:has(.st-key-conv) {{ flex: 1 1 auto !important; min-height: 0; overflow-y: auto;
+  .st-key-panel > div:has(.st-key-cuerpo) {{ flex: 1 1 auto !important; min-height: 0; display: flex; flex-direction: column; }}
+  .st-key-cuerpo {{ flex: 1 1 auto; min-height: 0; background: #fff; border-radius: 8px; overflow: hidden; gap: 0 !important;
+           box-shadow: 0 2px 8px rgba(21,94,102,.06); }}
+  .st-key-cuerpo > div:has(.st-key-conv) {{ flex: 1 1 auto !important; min-height: 0; overflow-y: auto;
            display: flex; flex-direction: column-reverse; }}  /* el scroll empieza abajo, en la última respuesta */
-  .st-key-panel > div:has(.st-key-entrada) {{ order: 3; }}
+  .st-key-cuerpo > div:has(.st-key-entrada) {{ order: 3; }}
   .st-key-conv {{ padding: 12px 14px 4px; gap: 10px !important; }}
   .vacio {{ color: var(--tinta-suave); font-size: 13px; line-height: 1.5; padding: 6px 2px; }}
   /* cada pregunta y su respuesta van en una tarjeta; la pregunta lleva una marca ámbar (el color del semáforo) */
-  .st-key-panel > div:has(.st-key-conv) {{ background: #F6F9F9; }}
+  .st-key-cuerpo > div:has(.st-key-conv) {{ background: #F6F9F9; }}
   [class*="st-key-qa_"] {{ background: #fff; border: 1px solid var(--linea); border-radius: 10px; padding: 12px 14px;
            gap: 8px !important; box-shadow: 0 2px 6px rgba(21,94,102,.05); }}
   .preg {{ background: #FBF5EA; border-left: 3px solid #E0A43A; border-radius: 0 6px 6px 0; padding: 7px 10px;
@@ -455,57 +460,58 @@ with col_ia:
                     if st.button(etiqueta, key=f"chip_{i}"):
                         pregunta = texto
 
-        with st.container(key="entrada"):
-            escrita = st.chat_input("Escribe tu pregunta…")
-        pregunta = escrita or pregunta
+        with st.container(key="cuerpo"):
+            with st.container(key="entrada"):
+                escrita = st.chat_input("Escribe tu pregunta…")
+            pregunta = escrita or pregunta
 
-        if pregunta and st.session_state.preguntas_hechas >= MAX_PREGUNTAS:
-            st.toast(f"Has llegado al límite de {MAX_PREGUNTAS} preguntas de esta demo. ¡Gracias por probarla!")
-            pregunta = None
-        aviso = None
-        if pregunta:
-            st.session_state.preguntas_hechas += 1
-            with st.spinner("Consultando los datos…"):
-                try:
-                    st.session_state.historial.insert(0, responder(pregunta))
-                except anthropic.AuthenticationError:
-                    aviso = "La clave de la API de Claude no es válida. Revisa ANTHROPIC_API_KEY."
-                except anthropic.RateLimitError:
-                    aviso = "Demasiadas peticiones seguidas. Espera unos segundos y vuelve a preguntar."
-                except anthropic.APIConnectionError:
-                    aviso = "No hay conexión con la API de Claude."
-                except anthropic.APIStatusError as e:
-                    aviso = f"Error de la API de Claude ({e.status_code}): {e.message}"
-                except psycopg.OperationalError:
-                    aviso = "No se puede conectar a PostgreSQL. Revisa el servidor y el usuario de lectura en el .env."
-                except OSError as e:
-                    aviso = f"No hay conexión con el modelo de IA. ({e})"
-                except (ValueError, RuntimeError, psycopg.Error, json.JSONDecodeError) as e:
-                    aviso = f"No he podido responder: {e}"
+            if pregunta and st.session_state.preguntas_hechas >= MAX_PREGUNTAS:
+                st.toast(f"Has llegado al límite de {MAX_PREGUNTAS} preguntas de esta demo. ¡Gracias por probarla!")
+                pregunta = None
+            aviso = None
+            if pregunta:
+                st.session_state.preguntas_hechas += 1
+                with st.spinner("Consultando los datos…"):
+                    try:
+                        st.session_state.historial.insert(0, responder(pregunta))
+                    except anthropic.AuthenticationError:
+                        aviso = "La clave de la API de Claude no es válida. Revisa ANTHROPIC_API_KEY."
+                    except anthropic.RateLimitError:
+                        aviso = "Demasiadas peticiones seguidas. Espera unos segundos y vuelve a preguntar."
+                    except anthropic.APIConnectionError:
+                        aviso = "No hay conexión con la API de Claude."
+                    except anthropic.APIStatusError as e:
+                        aviso = f"Error de la API de Claude ({e.status_code}): {e.message}"
+                    except psycopg.OperationalError:
+                        aviso = "No se puede conectar a PostgreSQL. Revisa el servidor y el usuario de lectura en el .env."
+                    except OSError as e:
+                        aviso = f"No hay conexión con el modelo de IA. ({e})"
+                    except (ValueError, RuntimeError, psycopg.Error, json.JSONDecodeError) as e:
+                        aviso = f"No he podido responder: {e}"
 
-        with st.container(key="conv"):
-            if aviso:
-                st.warning(aviso)
-            if not st.session_state.historial:
-                st.markdown('<div class="vacio">Pregunta lo que quieras sobre la cartera o pulsa uno de los '
-                            'ejemplos de arriba. La respuesta sale de la base de datos y verás cómo se ha '
-                            'calculado.</div>', unsafe_allow_html=True)
-            for i, r in enumerate(reversed(st.session_state.historial)):  # la más reciente abajo, junto a la caja
-                with st.container(key=f"qa_{i}"):
-                    st.markdown(f'<div class="preg"><small>PREGUNTA</small>{html.escape(r["pregunta"])}</div>'
-                                '<div class="resp-tag">RESPUESTA</div>', unsafe_allow_html=True)
-                    st.markdown(r["respuesta"])
-                    with st.container(key=f"acc_{i}"):
-                        if r.get("datos") is not None and not r["datos"].empty:
-                            with st.popover("Ver datos"):
-                                st.dataframe(r["datos"], use_container_width=True, hide_index=True)
-                        with st.popover("Cómo lo he calculado"):
-                            st.code(r["sql"] or "-- sin consulta", language="sql")
-                            st.caption(r["explicacion"])
-                        if r.get("ejemplo"):
-                            meta = "Ejemplo · prueba con otra pregunta"
-                        else:
-                            coste_txt = {"claude": f"≈ {r['coste']:.4f} USD", "gemini": "gratis"}.get(
-                                PROVEEDOR, "modelo local")
-                            meta = f'{r["tokens_in"] + r["tokens_out"]:,} tokens · {coste_txt} · {r["segundos"]:.1f} s'
-                        st.markdown(f'<div class="meta">{meta}</div>', unsafe_allow_html=True)
+            with st.container(key="conv"):
+                if aviso:
+                    st.warning(aviso)
+                if not st.session_state.historial:
+                    st.markdown('<div class="vacio">Pregunta lo que quieras sobre la cartera o pulsa uno de los '
+                                'ejemplos de arriba. La respuesta sale de la base de datos y verás cómo se ha '
+                                'calculado.</div>', unsafe_allow_html=True)
+                for i, r in enumerate(reversed(st.session_state.historial)):  # la más reciente abajo, junto a la caja
+                    with st.container(key=f"qa_{i}"):
+                        st.markdown(f'<div class="preg"><small>PREGUNTA</small>{html.escape(r["pregunta"])}</div>'
+                                    '<div class="resp-tag">RESPUESTA</div>', unsafe_allow_html=True)
+                        st.markdown(r["respuesta"])
+                        with st.container(key=f"acc_{i}"):
+                            if r.get("datos") is not None and not r["datos"].empty:
+                                with st.popover("Ver datos"):
+                                    st.dataframe(r["datos"], use_container_width=True, hide_index=True)
+                            with st.popover("Cómo lo he calculado"):
+                                st.code(r["sql"] or "-- sin consulta", language="sql")
+                                st.caption(r["explicacion"])
+                            if r.get("ejemplo"):
+                                meta = "Ejemplo · prueba con otra pregunta"
+                            else:
+                                coste_txt = {"claude": f"≈ {r['coste']:.4f} USD", "gemini": "gratis"}.get(
+                                    PROVEEDOR, "modelo local")
+                                meta = f'{r["tokens_in"] + r["tokens_out"]:,} tokens · {coste_txt} · {r["segundos"]:.1f} s'
+                            st.markdown(f'<div class="meta">{meta}</div>', unsafe_allow_html=True)
