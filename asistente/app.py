@@ -8,6 +8,7 @@ solo lectura y Claude redacta la respuesta con el dato real.
 Ejecutar:  streamlit run asistente/app.py
 """
 import csv
+import html
 import json
 import os
 import re
@@ -372,13 +373,16 @@ st.markdown(f"""
   .st-key-panel > div:has(.st-key-entrada) {{ order: 3; }}
   .st-key-conv {{ padding: 12px 14px 4px; gap: 10px !important; }}
   .vacio {{ color: var(--tinta-suave); font-size: 13px; line-height: 1.5; padding: 6px 2px; }}
-  /* mensajes: pregunta en burbuja suave a la derecha, respuesta como texto limpio a la izquierda */
-  [data-testid="stLayoutWrapper"]:has(> [class*="st-key-u_"]) {{ align-self: flex-end; width: fit-content !important;
-           max-width: 85%; margin-top: 14px; }}
-  [class*="st-key-u_"] {{ background: #E4F0F1; border-radius: 12px 12px 4px 12px; padding: 7px 12px; }}
-  [class*="st-key-u_"] p {{ font-size: 13px; color: var(--teal); font-weight: 500; margin: 0; }}
-  [class*="st-key-ia_"] {{ padding: 0 4px 0 2px; gap: 6px !important; }}
-  [class*="st-key-ia_"] p, [class*="st-key-ia_"] li {{ font-size: 13.5px; line-height: 1.55; color: var(--tinta); }}
+  /* cada pregunta y su respuesta van en una tarjeta; la pregunta lleva una marca ámbar (el color del semáforo) */
+  .st-key-panel > div:has(.st-key-conv) {{ background: #F6F9F9; }}
+  [class*="st-key-qa_"] {{ background: #fff; border: 1px solid var(--linea); border-radius: 10px; padding: 12px 14px;
+           gap: 8px !important; box-shadow: 0 2px 6px rgba(21,94,102,.05); }}
+  .preg {{ background: #FBF5EA; border-left: 3px solid #E0A43A; border-radius: 0 6px 6px 0; padding: 7px 10px;
+           font-size: 13px; font-weight: 600; color: #3A3F44; line-height: 1.45; }}
+  .preg small {{ display: block; font-size: 10px; letter-spacing: .12em; color: #B07A1E; font-weight: 700; margin-bottom: 2px; }}
+  .resp-tag {{ font-size: 10px; letter-spacing: .12em; color: var(--teal); font-weight: 700; margin: 2px 0 -6px; }}
+  [class*="st-key-qa_"] [data-testid="stMarkdownContainer"] {{ margin-bottom: 0; }}
+  [class*="st-key-qa_"] p, [class*="st-key-qa_"] li {{ font-size: 13.5px; line-height: 1.55; color: var(--tinta); }}
   [class*="st-key-acc_"] {{ flex-direction: row !important; align-items: center; flex-wrap: wrap; gap: 6px !important; }}
   [class*="st-key-acc_"] [data-testid="stElementContainer"], [class*="st-key-acc_"] [data-testid="stLayoutWrapper"] {{ width: auto !important; }}
   [class*="st-key-acc_"] button {{ background: transparent !important; border: 1px solid var(--linea) !important;
@@ -487,15 +491,15 @@ with col_ia:
                             'ejemplos de arriba. La respuesta sale de la base de datos y verás cómo se ha '
                             'calculado.</div>', unsafe_allow_html=True)
             for i, r in enumerate(reversed(st.session_state.historial)):  # la más reciente abajo, junto a la caja
-                with st.container(key=f"u_{i}"):
-                    st.markdown(r["pregunta"])
-                with st.container(key=f"ia_{i}"):
+                with st.container(key=f"qa_{i}"):
+                    st.markdown(f'<div class="preg"><small>PREGUNTA</small>{html.escape(r["pregunta"])}</div>'
+                                '<div class="resp-tag">RESPUESTA</div>', unsafe_allow_html=True)
                     st.markdown(r["respuesta"])
                     with st.container(key=f"acc_{i}"):
                         if r.get("datos") is not None and not r["datos"].empty:
                             with st.popover("Ver datos"):
                                 st.dataframe(r["datos"], use_container_width=True, hide_index=True)
-                        with st.popover("Ver SQL"):
+                        with st.popover("Cómo lo he calculado"):
                             st.code(r["sql"] or "-- sin consulta", language="sql")
                             st.caption(r["explicacion"])
                         if r.get("ejemplo"):
