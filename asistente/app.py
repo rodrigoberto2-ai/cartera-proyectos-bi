@@ -325,12 +325,11 @@ st.markdown(f"""
   header[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"] {{ display: none !important; }}
   .block-container {{ padding: 1.1rem 1.6rem 0.6rem; max-width: 100%; }}
 
-  /* barra de título, como la cabecera del informe */
-  .barra {{ background: var(--teal); color: #fff; border-radius: 8px; padding: 16px 24px;
-           display: flex; justify-content: space-between; align-items: center; gap: 12px;
-           margin-bottom: 14px; box-shadow: 0 6px 18px rgba(21,94,102,.18); }}
-  .barra b {{ letter-spacing: .2em; font-weight: 600; font-size: 17px; }}
-  .barra span {{ font-size: 12px; letter-spacing: .06em; opacity: .85; text-align: right; }}
+  /* título discreto: el protagonista es el informe */
+  .barra {{ color: var(--teal); padding: 2px 4px 10px; display: flex; justify-content: space-between;
+           align-items: baseline; gap: 12px; }}
+  .barra b {{ letter-spacing: .2em; font-weight: 700; font-size: 15px; }}
+  .barra span {{ font-size: 12px; color: var(--tinta-suave); text-align: right; }}
 
   /* informe: tarjeta blanca redondeada */
   /* el lienzo tiene la proporción de la página (16:9) y la barra inferior de Power BI queda fuera */
@@ -355,12 +354,12 @@ st.markdown(f"""
   .st-key-cabecera [data-testid="stMarkdownContainer"] {{ margin-bottom: 0; }}  /* evita que el subtítulo pise los botones */
 
   /* preguntas de ejemplo: botones blancos de cristal con texto verde */
-  .st-key-chips {{ flex-direction: row !important; flex-wrap: wrap; gap: 6px !important; margin-top: 4px; }}
+  .st-key-chips {{ flex-direction: row !important; flex-wrap: wrap; gap: 5px !important; margin-top: 4px; }}
   .st-key-chips [data-testid="stElementContainer"] {{ width: auto !important; }}
   .st-key-chips button {{
       background: rgba(255,255,255,.88) !important; color: var(--teal) !important;
       border: 1px solid rgba(255,255,255,.9) !important; border-radius: 6px !important;
-      padding: 2px 10px !important; min-height: 0 !important; height: 26px;
+      padding: 2px 8px !important; min-height: 0 !important; height: 26px;
       backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%);
       box-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(9,40,44,.15);
       transition: background .2s, transform .15s; }}
@@ -400,14 +399,34 @@ st.markdown(
 
 EJEMPLOS = {
     "Semáforo": "¿Cuántos proyectos hay en rojo, ámbar y verde?",
-    "Top desviaciones": "¿Qué 5 proyectos se desvían más del presupuesto?",
-    "Sobrecoste por sector": "¿Qué sector tiene más sobrecoste en los proyectos cerrados?",
-    "Coste de junio": "¿Cuál fue el coste total en junio de 2026?",
-    "Velocidad PRY-001": "¿Cómo va la velocidad de los últimos sprints del PRY-001?",
+    "Desviaciones": "¿Qué 5 proyectos se desvían más del presupuesto?",
+    "Sobrecoste": "¿Qué sector tiene más sobrecoste en los proyectos cerrados?",
+    "Coste junio": "¿Cuál fue el coste total en junio de 2026?",
+    "Sprints PRY-001": "¿Cómo va la velocidad de los últimos sprints del PRY-001?",
 }
 
+@st.cache_data(ttl=3600)
+def ejemplo_inicial() -> dict:
+    """Primera pregunta ya respondida, para que el panel no abra vacío. Los números salen de la
+    base de datos en cada arranque; el texto se arma aquí, sin llamar a la IA."""
+    sql = ("SELECT semaforo, COUNT(*) AS proyectos FROM cartera.vw_estado_proyecto GROUP BY semaforo "
+           "ORDER BY CASE semaforo WHEN 'Rojo' THEN 1 WHEN 'Ámbar' THEN 2 ELSE 3 END")
+    df = ejecutar(validar_sql(sql))
+    df = df.sort_values("semaforo", key=lambda c: c.map({"Rojo": 1, "Ámbar": 2, "Verde": 3})).reset_index(drop=True)
+    n = dict(zip(df["semaforo"], df["proyectos"]))
+    total = int(df["proyectos"].sum())
+    respuesta = (f"De los {total} proyectos, {n.get('Rojo', 0)} están en rojo, {n.get('Ámbar', 0)} en ámbar "
+                 f"y {n.get('Verde', 0)} en verde.")
+    return {"pregunta": EJEMPLOS["Semáforo"], "sql": sql, "respuesta": respuesta, "datos": df,
+            "explicacion": "Cuenta los proyectos de la vista de estado agrupados por semáforo.",
+            "ejemplo": True}
+
+
 if "historial" not in st.session_state:
-    st.session_state.historial = []
+    try:
+        st.session_state.historial = [ejemplo_inicial()]
+    except Exception:  # sin datos no hay ejemplo, pero el asistente sigue funcionando
+        st.session_state.historial = []
 st.session_state.setdefault("preguntas_hechas", 0)
 
 col_bi, col_ia = st.columns([73, 27], gap="small")
@@ -472,6 +491,10 @@ with col_ia:
                     with st.expander("Cómo lo he calculado"):
                         st.code(r["sql"] or "-- sin consulta", language="sql")
                         st.caption(r["explicacion"])
+                    if r.get("ejemplo"):
+                        st.markdown('<div class="meta">Ejemplo de respuesta · prueba tú con otra pregunta</div>',
+                                    unsafe_allow_html=True)
+                        continue
                     coste_txt = {"claude": f"≈ {r['coste']:.4f} USD", "gemini": "plan gratuito"}.get(
                         PROVEEDOR, "coste 0 (modelo local)")
                     st.markdown(f'<div class="meta">{r["tokens_in"]:,} + {r["tokens_out"]:,} tokens · '
