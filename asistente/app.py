@@ -351,21 +351,21 @@ st.markdown(f"""
   .st-key-cabecera {{ background: linear-gradient(135deg, var(--teal) 0%, var(--teal-2) 45%, var(--teal-soft) 100%);
            padding: 16px 16px 14px; gap: 10px !important; }}
   .cab-titulo {{ color: #fff; font-weight: 600; letter-spacing: .14em; font-size: 13px; }}
-  .cab-sub {{ color: rgba(255,255,255,.82); font-size: 11.5px; margin-top: 2px; }}
+  .cab-sub {{ color: rgba(255,255,255,.82); font-size: 11px; margin-top: 3px; }}
+  .st-key-cabecera [data-testid="stMarkdownContainer"] {{ margin-bottom: 0; }}  /* evita que el subtítulo pise los botones */
 
-  /* preguntas de ejemplo: píldoras de cristal (liquid glass) */
-  .st-key-chips {{ flex-direction: row !important; flex-wrap: wrap; gap: 6px !important; }}
+  /* preguntas de ejemplo: botones blancos de cristal con texto verde */
+  .st-key-chips {{ flex-direction: row !important; flex-wrap: wrap; gap: 6px !important; margin-top: 4px; }}
   .st-key-chips [data-testid="stElementContainer"] {{ width: auto !important; }}
   .st-key-chips button {{
-      background: rgba(255,255,255,.16) !important; color: #fff !important;
-      border: 1px solid rgba(255,255,255,.45) !important; border-radius: 6px !important;
-      padding: 3px 12px !important; min-height: 0 !important;
-      backdrop-filter: blur(12px) saturate(160%); -webkit-backdrop-filter: blur(12px) saturate(160%);
-      box-shadow: inset 0 1px 0 rgba(255,255,255,.55), inset 0 -1px 0 rgba(255,255,255,.12),
-                  0 4px 14px rgba(9,40,44,.18);
+      background: rgba(255,255,255,.88) !important; color: var(--teal) !important;
+      border: 1px solid rgba(255,255,255,.9) !important; border-radius: 6px !important;
+      padding: 2px 10px !important; min-height: 0 !important; height: 26px;
+      backdrop-filter: blur(10px) saturate(150%); -webkit-backdrop-filter: blur(10px) saturate(150%);
+      box-shadow: inset 0 1px 0 #fff, 0 2px 8px rgba(9,40,44,.15);
       transition: background .2s, transform .15s; }}
-  .st-key-chips button:hover {{ background: rgba(255,255,255,.30) !important; transform: translateY(-1px); }}
-  .st-key-chips button p {{ font-size: 12px !important; font-weight: 500; }}
+  .st-key-chips button:hover {{ background: #fff !important; transform: translateY(-1px); }}
+  .st-key-chips button p {{ font-size: 11px !important; font-weight: 600; color: var(--teal); }}
 
   /* conversación: ocupa el espacio que queda y hace scroll */
   .st-key-panel > div:has(.st-key-conv) {{ flex: 1 1 auto !important; min-height: 0; overflow-y: auto;
