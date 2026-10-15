@@ -321,7 +321,8 @@ st.markdown(f"""
   }}
   html, body, .stApp, .stApp p, .stApp button, .stApp textarea, .stApp summary {{ font-family: 'Inter', sans-serif; }}
   .stApp {{ background: var(--fondo); }}
-  header[data-testid="stHeader"] {{ background: transparent; }}
+  /* sin la barra de herramientas de Streamlit encima del título */
+  header[data-testid="stHeader"], [data-testid="stToolbar"], [data-testid="stDecoration"] {{ display: none !important; }}
   .block-container {{ padding: 1.1rem 1.6rem 0.6rem; max-width: 100%; }}
 
   /* barra de título, como la cabecera del informe */
@@ -415,7 +416,7 @@ if "historial" not in st.session_state:
     st.session_state.historial = []
 st.session_state.setdefault("preguntas_hechas", 0)
 
-col_bi, col_ia = st.columns([7, 3], gap="small")
+col_bi, col_ia = st.columns([73, 27], gap="small")
 
 with col_bi:
     st.markdown(f'<div class="pbi"><iframe src="{POWERBI_URL}" allowfullscreen></iframe></div>',
