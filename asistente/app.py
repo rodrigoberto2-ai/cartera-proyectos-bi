@@ -372,14 +372,20 @@ st.markdown(f"""
   .st-key-panel > div:has(.st-key-entrada) {{ order: 3; }}
   .st-key-conv {{ padding: 12px 14px 4px; gap: 10px !important; }}
   .vacio {{ color: var(--tinta-suave); font-size: 13px; line-height: 1.5; padding: 6px 2px; }}
-  [data-testid="stChatMessage"] {{ background: #F3F8F9; border-radius: 8px; padding: 10px 12px; }}
-  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) {{ background: var(--teal); }}
-  [data-testid="stChatMessage"]:has([data-testid="stChatMessageAvatarUser"]) p {{ color: #fff; }}
-  [data-testid="stChatMessage"] p {{ font-size: 13.5px; color: var(--tinta); }}
-  [data-testid="stChatMessageAvatarAssistant"] {{ background: var(--teal-2); }}
-  .meta {{ color: var(--tinta-suave); font-size: 11px; }}
-  [data-testid="stExpander"] details {{ border-radius: 6px; border-color: var(--linea); }}
-  [data-testid="stExpander"] summary p {{ font-size: 12px; color: var(--teal); }}
+  /* mensajes: pregunta en burbuja suave a la derecha, respuesta como texto limpio a la izquierda */
+  [data-testid="stLayoutWrapper"]:has(> [class*="st-key-u_"]) {{ align-self: flex-end; width: fit-content !important;
+           max-width: 85%; margin-top: 14px; }}
+  [class*="st-key-u_"] {{ background: #E4F0F1; border-radius: 12px 12px 4px 12px; padding: 7px 12px; }}
+  [class*="st-key-u_"] p {{ font-size: 13px; color: var(--teal); font-weight: 500; margin: 0; }}
+  [class*="st-key-ia_"] {{ padding: 0 4px 0 2px; gap: 6px !important; }}
+  [class*="st-key-ia_"] p, [class*="st-key-ia_"] li {{ font-size: 13.5px; line-height: 1.55; color: var(--tinta); }}
+  [class*="st-key-acc_"] {{ flex-direction: row !important; align-items: center; flex-wrap: wrap; gap: 6px !important; }}
+  [class*="st-key-acc_"] [data-testid="stElementContainer"], [class*="st-key-acc_"] [data-testid="stLayoutWrapper"] {{ width: auto !important; }}
+  [class*="st-key-acc_"] button {{ background: transparent !important; border: 1px solid var(--linea) !important;
+           border-radius: 6px !important; min-height: 0 !important; height: 24px; padding: 0 9px !important; }}
+  [class*="st-key-acc_"] button:hover {{ border-color: var(--teal-soft) !important; background: #F3F8F9 !important; }}
+  [class*="st-key-acc_"] button p {{ font-size: 11.5px; color: var(--teal); font-weight: 500; }}
+  .meta {{ color: #8AA0A4; font-size: 11px; }}
 
   /* caja de texto abajo */
   .st-key-entrada {{ padding: 8px 12px 12px; border-top: 1px solid var(--linea); }}
@@ -480,22 +486,22 @@ with col_ia:
                 st.markdown('<div class="vacio">Pregunta lo que quieras sobre la cartera o pulsa uno de los '
                             'ejemplos de arriba. La respuesta sale de la base de datos y verás cómo se ha '
                             'calculado.</div>', unsafe_allow_html=True)
-            for r in reversed(st.session_state.historial):  # la más reciente abajo, junto a la caja
-                with st.chat_message("user"):
-                    st.write(r["pregunta"])
-                with st.chat_message("assistant"):
-                    st.write(r["respuesta"])
-                    if r.get("datos") is not None and not r["datos"].empty:
-                        with st.expander("Ver datos"):
-                            st.dataframe(r["datos"], use_container_width=True, hide_index=True)
-                    with st.expander("Cómo lo he calculado"):
-                        st.code(r["sql"] or "-- sin consulta", language="sql")
-                        st.caption(r["explicacion"])
-                    if r.get("ejemplo"):
-                        st.markdown('<div class="meta">Ejemplo de respuesta · prueba tú con otra pregunta</div>',
-                                    unsafe_allow_html=True)
-                        continue
-                    coste_txt = {"claude": f"≈ {r['coste']:.4f} USD", "gemini": "plan gratuito"}.get(
-                        PROVEEDOR, "coste 0 (modelo local)")
-                    st.markdown(f'<div class="meta">{r["tokens_in"]:,} + {r["tokens_out"]:,} tokens · '
-                                f'{coste_txt} · {r["segundos"]:.1f} s</div>', unsafe_allow_html=True)
+            for i, r in enumerate(reversed(st.session_state.historial)):  # la más reciente abajo, junto a la caja
+                with st.container(key=f"u_{i}"):
+                    st.markdown(r["pregunta"])
+                with st.container(key=f"ia_{i}"):
+                    st.markdown(r["respuesta"])
+                    with st.container(key=f"acc_{i}"):
+                        if r.get("datos") is not None and not r["datos"].empty:
+                            with st.popover("Ver datos"):
+                                st.dataframe(r["datos"], use_container_width=True, hide_index=True)
+                        with st.popover("Ver SQL"):
+                            st.code(r["sql"] or "-- sin consulta", language="sql")
+                            st.caption(r["explicacion"])
+                        if r.get("ejemplo"):
+                            meta = "Ejemplo · prueba con otra pregunta"
+                        else:
+                            coste_txt = {"claude": f"≈ {r['coste']:.4f} USD", "gemini": "gratis"}.get(
+                                PROVEEDOR, "modelo local")
+                            meta = f'{r["tokens_in"] + r["tokens_out"]:,} tokens · {coste_txt} · {r["segundos"]:.1f} s'
+                        st.markdown(f'<div class="meta">{meta}</div>', unsafe_allow_html=True)
